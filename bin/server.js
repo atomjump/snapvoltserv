@@ -118,6 +118,31 @@ function checkConfigCurrent(cb) {
 }
 
 
+function fileWalk(startDir)
+{
+   var items = []; // files, directories, symlinks, etc
+   fse.walk(startDir)
+	  .on('data', function (item) {
+	    items.push(item.path);
+	    console.log(item.path);
+
+	    //TODO: Read and return the first file in dir.
+
+	  });
+
+	  //.on('end', function () {
+	  //  console.dir(items) // => [ ... array of files]
+      //});
+
+}
+
+function readRemoteServer()
+{
+	//TODO: Every 5 seconds, read the remote server in the config file, and download images to our server.
+
+
+}
+
 
 checkConfigCurrent(function(err) {
 
@@ -263,8 +288,25 @@ checkConfigCurrent(function(err) {
 		  if((url == '/') || (url == "")) {
 			  url = "/index.html";
 		  }
-		  var mydir = __dirname + "/../public" + url;
-		  var normpath = path.normalize(mydir);
+
+		  var removeAfterwards = false;
+		  var read = '/read';
+
+		  if(url.substr(0,read.length) == read)
+		  	 //Get uploaded photos from coded subdir
+			 var codeDir = url.substr(read.length);
+			 var parentDir = serverParentDir();
+			 console.log("This drive:" + parentDir);
+			 var outdir = parentDir + outdirPhotos + '/' + codeDir;
+			 //Get first file in the directory list
+			 removeAfterwards = true;
+
+	      } else {
+				//Get a front-end facing image or html file
+				var outdir = __dirname + "/../public" + url;
+	      }
+
+		  var normpath = path.normalize(outdir);
 		  console.log(normpath);
 
 		  // set the content type

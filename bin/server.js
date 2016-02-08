@@ -147,7 +147,7 @@ function fileWalk(startDir, cb)
 		  })
 		  .on('end', function () {
 			for(var cnt = 0; cnt< items.length; cnt++) {
-				 if(path.normalize(items[cnt]) != path.normalize(startDir)) {
+				 if(items[cnt].indexOf(".jpg") >= 0) {
 					cb(items[cnt]);
 				 	return;
 				 }

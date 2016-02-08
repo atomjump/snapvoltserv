@@ -87,21 +87,24 @@ function checkConfigCurrent(cb) {
 					//On each drive, create a backup standard directory for photos
 					console.log("Drive detected:" + JSON.stringify(disks[cnt]));
 					var drive = disks[cnt].mountpoint;
+					
+					if(drive) {
 
-					if(serverParentDir().indexOf(drive) < 0) {
-						//Drive is not included in this server parent dir, therefore talking about a different drive
+					    if(serverParentDir().indexOf(drive) < 0) {
+						    //Drive is not included in this server parent dir, therefore talking about a different drive
 
-						//Create the dir
-						if (!fs.existsSync(path.normalize(drive + outdirDefaultParent))){
-							fs.mkdirSync(path.normalize(drive + outdirDefaultParent));
-						}
+						    //Create the dir
+						    if (!fs.existsSync(path.normalize(drive + outdirDefaultParent))){
+							    fs.mkdirSync(path.normalize(drive + outdirDefaultParent));
+						    }
 
-						if (!fs.existsSync(path.normalize(drive + outdirDefaultParent + outdirPhotos))){
-							fs.mkdirSync(path.normalize(drive + outdirDefaultParent + outdirPhotos));
-						}
+						    if (!fs.existsSync(path.normalize(drive + outdirDefaultParent + outdirPhotos))){
+							    fs.mkdirSync(path.normalize(drive + outdirDefaultParent + outdirPhotos));
+						    }
 
-						//Append to the file's array
-						content.backupTo = pushIfNew(content.backupTo, drive + outdirDefaultParent + outdirPhotos);
+						    //Append to the file's array
+						    content.backupTo = pushIfNew(content.backupTo, drive + outdirDefaultParent + outdirPhotos);
+					    }
 					}
 				}
 

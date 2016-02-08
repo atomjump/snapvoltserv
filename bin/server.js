@@ -142,7 +142,8 @@ function fileWalk(startDir, cb)
    var walk = fsExtra.walk(startDir);
 
 	walk.on('data', function (item) {
-			items.push(item.path)
+	        console.log("Found:" + item.path);
+			items.push(item.path);
 		  })
 		  .on('end', function () {
 			for(var cnt = 0; cnt< items.length; cnt++) {

@@ -9,12 +9,14 @@ var exec = require('child_process').exec;
 var drivelist = require('drivelist');
 var uuid = require('node-uuid');
 var fsExtra = require('fs-extra');
+var request = require("request");
 
 var outdirDefaultParent = '/snapvolt';
 var outdirPhotos = '/photos';
 var defaultTitle = "image";
 var currentDisks = [];
 var configFile = '../../config.json';
+var noFurtherFiles = "none";			//This gets piped out if there are no further files in directory
 
 
 
@@ -106,6 +108,12 @@ function checkConfigCurrent(cb) {
 					}
 
 					console.log("The config file was saved!");
+
+					//Now start any ping to read from a remote server
+					if(content.readProxy) {
+						readRemoteServer(content.readProxy);
+
+					}
 					cb(null);
 				});
 
@@ -118,28 +126,60 @@ function checkConfigCurrent(cb) {
 }
 
 
-function fileWalk(startDir)
+function fileWalk(startDir, cb)
 {
-   var items = []; // files, directories, symlinks, etc
-   fse.walk(startDir)
-	  .on('data', function (item) {
-	    items.push(item.path);
-	    console.log(item.path);
+   //Read and return the first file in dir, and the count of which file it is. Only the cnt = 0 is used
+   var items = [];
+   console.log("Searching:" + startDir);
 
-	    //TODO: Read and return the first file in dir.
+   var walk = fsExtra.walk(startDir);
 
-	  });
+	walk.on('data', function (item) {
+			items.push(item.path)
+		  })
+		  .on('end', function () {
+			for(var cnt = 0; cnt< items.length; cnt++) {
+				 if(path.normalize(items[cnt]) != path.normalize(startDir)) {
+					cb(items[cnt]);
+				 	return;
+				 }
+			}
+			cb(null);
+	  })
 
-	  //.on('end', function () {
-	  //  console.dir(items) // => [ ... array of files]
-      //});
 
 }
 
-function readRemoteServer()
-{
-	//TODO: Every 5 seconds, read the remote server in the config file, and download images to our server.
 
+function download(uri, callback){
+  request.head(uri, function(err, res, body){
+    if(err) {
+		console.log("Error requesting from proxy:" + err);
+	} else {
+		console.log(JSON.stringify(res.headers));
+    	console.log('content-type:', res.headers['content-type']);
+    	console.log('content-length:', res.headers['content-length']);
+    	console.log('file-name:', res.headers['file-name']);
+
+		var createFile = serverParentDir() + outdirPhotos + res.headers['file-name'];  //TODO remove temp
+		console.log("Creating file:" + createFile);
+    	var r = request(uri).pipe(fs.createWriteStream(createFile)).on('close', callback);
+    	r.on('close', callback);
+	}
+  });
+}
+
+
+
+function readRemoteServer(url)
+{
+	//Every 5 seconds, read the remote server in the config file, and download images to our server.
+	setInterval(function() {
+		download(url, function(){
+			  console.log('done');
+		});
+
+	}, 5000);
 
 }
 
@@ -246,6 +286,7 @@ checkConfigCurrent(function(err) {
 							for(var cnt=0; cnt< content.backupTo.length; cnt++) {
 								var target = content.backupTo[cnt] + '/' + finalFileName;
 								console.log("Backing up " + thisPath + " to:" + target);
+								//TODO: check functional
 								fsExtra.ensureDirSync(content.backupTo[cnt], function(err) {
 									if(err) {
 										console.log("Warning: Could not create directory for backup: " + content.backupTo[cnt]);
@@ -292,50 +333,102 @@ checkConfigCurrent(function(err) {
 		  var removeAfterwards = false;
 		  var read = '/read';
 
-		  if(url.substr(0,read.length) == read)
+		  if(url.substr(0,read.length) == read) {
 		  	 //Get uploaded photos from coded subdir
 			 var codeDir = url.substr(read.length);
 			 var parentDir = serverParentDir();
 			 console.log("This drive:" + parentDir);
-			 var outdir = parentDir + outdirPhotos + '/' + codeDir;
-			 //Get first file in the directory list
-			 removeAfterwards = true;
+			 var outdir = path.normalize(parentDir + outdirPhotos + '/' + codeDir);
+			 var compareWith = path.normalize(parentDir + outdirPhotos);
+
+			 console.log("Output directory to scan " + outdir + ". Must include:" + compareWith);
+			 //For security purposes the path must include the parentDir and outdiePhotos in a complete form
+			 //ie. be subdirectories. Otherwise a ../../ would allow deletion of an internal file
+			 if(outdir.indexOf(compareWith) > -1) {
+
+
+				 //Get first file in the directory list
+				 fileWalk(outdir, function(outfile, cnt) {
+
+					 if(outfile) {
+						//Get outfile - compareWith
+						var localFileName = outfile.replace(compareWith, "");
+						console.log("Local file to download via proxy as:" + localFileName);
+						console.log("About to download (eventually delete): " + outfile);
+
+						serveUpFile(outfile,localFileName, res, true);
+					 } else {
+						//Reply with a 'no further files' simple text response to client
+
+						console.log("No images");
+						res.writeHead(200, {'content-type': 'text/html'});
+						res.end(noFurtherFiles);
+						return;
+
+					 }
+				 });
+		 	 } else {
+				console.log("Security exception detected in " + outdir);
+				return;
+		 	 }
 
 	      } else {
 				//Get a front-end facing image or html file
 				var outdir = __dirname + "/../public" + url;
+				serveUpFile(outdir, null, res, false);
 	      }
+		}
 
-		  var normpath = path.normalize(outdir);
-		  console.log(normpath);
-
-		  // set the content type
-		  var ext = path.extname(normpath);
-		  var contentType = 'text/html';
-
-		  //Handle images
-		  if (ext === '.png') {
-			 contentType = 'image/png';
-		  }
-		  if (ext === '.jpg') {
-			 contentType = 'image/jpg';
-		  }
-
-		  //Being preparation to send
-		  res.writeHead(200, {'content-type': contentType});
-
-		  //Read the file from disk, then send to client
-		  fs.readFile(normpath, function (err,data) {
-			  if (err) {
-				res.writeHead(404);
-				res.end(JSON.stringify(err));
-				return;
-			  }
-			  res.writeHead(200);
-			  res.end(data);
-		  });
-
-
-	   }
 	}).listen(5566);
 });
+
+function serveUpFile(fullFile, theFile, res, deleteAfterwards) {
+
+  var normpath = path.normalize(fullFile);
+
+  console.log(normpath);
+
+
+  // set the content type
+  var ext = path.extname(normpath);
+  var contentType = 'text/html';
+
+  //Handle images
+  if (ext === '.png') {
+	 contentType = 'image/png';
+  }
+  if (ext === '.jpg') {
+	 contentType = 'image/jpg';
+  }
+
+  //Being preparation to send
+  res.writeHead(200, {'content-type': contentType, 'file-name': normpath});
+
+  //Read the file from disk, then send to client
+  fs.readFile(normpath, function (err,data) {
+	  if (err) {
+		res.writeHead(404);
+		res.end(JSON.stringify(err));
+		return;
+	  }
+	  res.writeHead(200, {'content-type': contentType, 'file-name': theFile});
+	  res.end(data, function(err) {
+		  //Wait until finished sending, then delete locally
+		  if(err) {
+	  	  	 console.log(err);
+	  	  } else {
+			  if(deleteAfterwards == true) {
+					//Delete the file 'normpath' from the server. This server is like a proxy cache and
+					//doesn't hold permanently
+					console.log("About to delete:" + normpath);
+					fs.unlink(normpath, function() {
+					   console.log("Deleted " + normpath + " successfully!");
+					})
+			  }
+	   	   }
+  	   });
+  });
+
+
+
+}

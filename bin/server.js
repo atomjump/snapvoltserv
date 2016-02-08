@@ -52,7 +52,11 @@ function ensurePhotoReadableWindows(fullPath, cb) {
 		exec(run, function(error, stdout, stderr){
 			console.log(stdout);
 			if(cb) {
-				cb(error);
+			    if(error) {
+				    cb(error);
+				} else {
+				    cb(null);
+				}
 			}
 		});
 	} else {
@@ -60,6 +64,38 @@ function ensurePhotoReadableWindows(fullPath, cb) {
 	
 	}
 }
+
+function ensureDirectoryWritableWindows(fullPath, cb) {
+	//Optional cb(err) passed back
+	//Check platform is windows
+	var platform = process.platform;
+	console.log(process.platform);
+	var isWin = false;
+	if(platform.indexOf("win") >= 0) {
+	    isWin = true;
+	}
+	console.log("IsWin=" + isWin);
+	if(isWin) {
+		//See: http://serverfault.com/questions/335625/icacls-granting-access-to-all-users-on-windows-7
+		//Grant all users access, rather than just admin
+		var run = 'icacls ' + fullPath + ' /grant Everyone:(OI)(CI)F';
+		console.log("Running:" + run);
+		exec(run, function(error, stdout, stderr){
+			console.log(stdout);
+			if(cb) {
+			    if(error) {
+				    cb(error);
+			    } else {
+			        cb(null);
+			    }
+			}
+		});
+	} else {
+	    
+	    cb(null);
+	}
+}
+
 
 
 function checkConfigCurrent(cb) {
@@ -169,10 +205,43 @@ function download(uri, callback){
     	console.log('content-length:', res.headers['content-length']);
     	console.log('file-name:', res.headers['file-name']);
 
-		var createFile = serverParentDir() + outdirPhotos + res.headers['file-name'];  //TODO remove temp
+		var createFile = path.normalize(serverParentDir() + outdirPhotos + res.headers['file-name']);  
 		console.log("Creating file:" + createFile);
-    	var r = request(uri).pipe(fs.createWriteStream(createFile)).on('close', callback);
-    	r.on('close', callback);
+		var dirCreate = path.dirname(createFile);
+		console.log("Creating dir:" + dirCreate);
+		//Make sure directory
+    	fsExtra.ensureDir(dirCreate, function(err) {
+		    if(err) {
+			    console.log("Warning: Could not create directory for: " + dirCreate);
+		    } else {
+		        console.log("Created dir:" + dirCreate);
+		        ensureDirectoryWritableWindows(dirCreate, function(err) {
+		            console.log(err);
+		        
+		            var writeStream = fs.createWriteStream(createFile);
+		        
+                	var r = request(uri).pipe(writeStream);
+                	
+                	r.on('close', function(){
+                	    console.log("File complete");
+                	     ensurePhotoReadableWindows(createFile);
+                	    callback();
+                	});
+                	r.on('end', function() {
+                	    console.log("File end");
+                	    ensurePhotoReadableWindows(createFile);
+                	    callback();
+                	});
+                	
+                	writeStream.on('error', function(err) {
+                	    console.log("Writing error:" + err);
+                	});
+		        
+		        
+		        });
+		        
+            }
+        });
 	}
   });
 }

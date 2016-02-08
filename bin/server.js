@@ -75,7 +75,7 @@ function checkConfigCurrent(cb) {
 	//Write to a json file with the current drive.  This can be removed later manually by user, or added to
 	fs.readFile(__dirname + configFile, function read(err, data) {
 		if (err) {
-				cb("Sorry, cannot read config file!");
+				cb("Sorry, cannot read config file! " + err);
 		} else {
 			var content = JSON.parse(data);
 

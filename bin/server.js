@@ -15,8 +15,7 @@ var outdirDefaultParent = '/snapvolt';
 var outdirPhotos = '/photos';
 var defaultTitle = "image";
 var currentDisks = [];
-var configFile = '../../config.json';
-var configFileNonWindows = '../config.json';
+var configFile = '/../config.json';
 var noFurtherFiles = "none";			//This gets piped out if there are no further files in directory
 
 
@@ -67,11 +66,7 @@ function checkConfigCurrent(cb) {
 	//Reads and updates config to get any new hard-drives added to the system, or a GUID added
 	//Returns cb(err) where err = null, or a string with the error
 
-    var isWin = /^win/.test(process.platform);
-	if(!isWin) {
-	    configFile = configFileNonWindows; 
-	}
-
+  
 	//Write to a json file with the current drive.  This can be removed later manually by user, or added to
 	fs.readFile(__dirname + configFile, function read(err, data) {
 		if (err) {

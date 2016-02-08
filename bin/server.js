@@ -188,7 +188,7 @@ checkConfigCurrent(function(err) {
 
 	if(err) {
 		console.log("Error updating config.json: " + err);
-		exit(0);
+		process.exit(0);
 	}
 
 	http.createServer(function(req, res) {

@@ -66,7 +66,9 @@ function ensurePhotoReadableWindows(fullPath, cb) {
 			}
 		});
 	} else {
+	    if(cb) {
 	     cb(null);
+	    }
 	
 	}
 }

@@ -419,12 +419,20 @@ checkConfigCurrent(function(err) {
 
 		  var removeAfterwards = false;
 		  var read = '/read';
+          console.log("Url requested:" + url);
 
 		  if(url.substr(0,read.length) == read) {
 		  	 //Get uploaded photos from coded subdir
 			 var codeDir = url.substr(read.length);
 			 var parentDir = serverParentDir();
 			 console.log("This drive:" + parentDir);
+			 console.log("Coded directory:" + codeDir);
+			 
+			 if(codeDir.length <= 0) {
+			     console.log("Cannot read without a directory");
+			     return;
+			 }
+			 
 			 var outdir = path.normalize(parentDir + outdirPhotos + '/' + codeDir);
 			 var compareWith = path.normalize(parentDir + outdirPhotos);
 

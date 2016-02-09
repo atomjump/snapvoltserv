@@ -236,36 +236,29 @@ function download(uri, callback){
 		            } else {
 		                console.log("Created dir:" + dirCreate);
 		                ensureDirectoryWritableWindows(dirCreate, function(err) {
-		                    console.log(err);
-		                
-		                    var writeStream = fs.createWriteStream(createFile);
-		                
-                        	var r = request(uri).pipe(writeStream);
-                        	
-                        	r.on('close', function(){
-                        	    console.log("File complete");
-                        	     ensurePhotoReadableWindows(createFile);
-                        	    callback();
-                        	});
-                        	r.on('end', function() {
-                        	    console.log("File end");
-                        	    ensurePhotoReadableWindows(createFile);
-                        	    callback();
-                        	});
-                        	
-                        	writeStream.on('error', function(err) {
-                        	    console.log("Writing error:" + err);
-                        	});
+		                    
+		                    if(err) {
+		                        console.log("Error processing dir:" + err);
+		                    } else {
+		                        console.log("Directory processed");
+		                        console.log("About to create local file " + createFile + " from uri:" + uri);
+		                        var file = fs.createWriteStream(createFile);
+                                var request = http.get(uri, function(response) {
+                                  response.pipe(file);
+                                });
+                            }   
+		                    
+		                   
 		                
 		                
-		                });
+		                }); //end of directory writable
 		                
                     }
-                });
-            }
-        }
-	}
-  });
+                }); //end of ensuredir exists
+            } //end of if file exists
+        } //end of if file-name exists
+	} //end of no error from proxy
+  }); //end of request head
 }
 
 
@@ -521,6 +514,7 @@ function serveUpFile(fullFile, theFile, res, deleteAfterwards) {
 	  res.writeHead(200, {'content-type': contentType, 'file-name': theFile});
 	  res.end(data, function(err) {
 		  //Wait until finished sending, then delete locally
+		  
 		  if(err) {
 	  	  	 console.log(err);
 	  	  } else {

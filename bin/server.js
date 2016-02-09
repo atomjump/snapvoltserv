@@ -418,7 +418,7 @@ checkConfigCurrent(function(err) {
 		  }
 
 		  var removeAfterwards = false;
-		  var read = '/read';
+		  var read = '/read/';
           console.log("Url requested:" + url);
 
 		  if(url.substr(0,read.length) == read) {

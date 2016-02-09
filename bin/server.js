@@ -181,7 +181,7 @@ function fileWalk(startDir, cb)
    var items = [];
    console.log("Searching:" + startDir);
 
-   if (!fs.existsSync(path.normalize(startDir))){
+   if (fsExtra.existsSync(path.normalize(startDir))){
        try { 
            var walk = fsExtra.walk(startDir);
 

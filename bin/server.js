@@ -181,21 +181,26 @@ function fileWalk(startDir, cb)
    var items = [];
    console.log("Searching:" + startDir);
 
-   var walk = fsExtra.walk(startDir);
+   if (!fs.existsSync(path.normalize(startDir))){ 
+       var walk = fsExtra.walk(startDir);
 
-	walk.on('data', function (item) {
-	        console.log("Found:" + item.path);
-			items.push(item.path);
-		  })
-		  .on('end', function () {
-			for(var cnt = 0; cnt< items.length; cnt++) {
-				 if(items[cnt].indexOf(".jpg") >= 0) {
-					cb(items[cnt]);
-				 	return;
-				 }
-			}
-			cb(null);
-	  })
+	    walk.on('data', function (item) {
+	            console.log("Found:" + item.path);
+			    items.push(item.path);
+		      })
+		      .on('end', function () {
+			    for(var cnt = 0; cnt< items.length; cnt++) {
+				     if(items[cnt].indexOf(".jpg") >= 0) {
+					    cb(items[cnt]);
+				     	return;
+				     }
+			    }
+			    cb(null);
+	      });
+	} else {
+	    cb(null);
+	
+	}
 
 
 }

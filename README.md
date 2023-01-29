@@ -1,5 +1,7 @@
 # snapvoltserv
 
+__WARNING: this project has now moved to https://src.atomjump.com/atomjump/snapvoltserv.git__
+
 1. To Install Proxy
 ===================
 
